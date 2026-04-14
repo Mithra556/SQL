@@ -1,0 +1,146 @@
+Stored Procedure
+A Stored Procedure is a pre-written set of SQL queries stored in the database that can be executed with a single command (Instead of writing the same SQL again and again you store it once and just call it like a function)
+
+Why Stored Procedure
+Avoid writing repeated queries, improve performance, Organize complex logic, Add security.
+
+When 
+Complex business logic, reuse queries many times, input parameters, control access.
+
+DELIMITER //
+CREATE PROCEDURE procedure_name()
+BEGIN
+               --SQL queries--
+END //
+
+DELIMITER
+CALL procedure_name();
+
+TO Drop
+DROP PROCEDURE procedure_name;
+
+In SQL Server
+CREATE PROCEDURE @param1 datatype, @param2 datatype	
+AS 
+BEGIN
+SELECT column1, column2
+FROM table_name
+WHERE columnN = @paramN;
+END;
+
+To run a Stored Procedure: EXEC procedure_name @param1 = ‘value1’, @param2 = ‘value2’;
+
+IN Parameter: We send a value into the procedure, the procedure uses it and does not return it back.
+
+OUT Parameter: Procedure calculates something and sends results back.
+
+1.	Get Customer details By ID
+DELIMITER // 
+CREATE PROCEDURE GetCustomerByID(IN cust_id INT) 
+BEGIN 
+            SELECT customer_id, first_name, last_name, email 
+            FROM customer
+            WHERE customer_id = cust_id; 
+END // 
+DELIMITER ;
+
+CALL GetCustomerByID(5);
+
+Exp: Here we are creating a Stored Procedure called GetCustomerByID, this procedure is taking customer id as input. BEGIN starts the body of procedure where we fetch customer details then end the procedure. Call runs the procedure and get details for ID 5.
+
+2.	Find total number of rents
+DELIMITER //
+CREATE PROCEDURE GetTotalRentals(OUT total_rentals INT)
+BEGIN
+    SELECT COUNT(*) INTO total_rentals
+    FROM rental;
+END //
+
+DELIMITER ;
+
+CALL GetTotalRentals(@total);
+SELECT @total;
+
+Exp: Here we are creating procedure name GetTotalRentals. In this query the OUT parameter will be returning the value. Here we are counting the total rows in ‘rent’ and stores the result in OUT in total_rentals. CALL functions runs the procedure and store result in @total and then SELECT @total shows the value stored in @total.
+
+3.	Counting rentals for a specific customer
+
+DELIMITER //
+
+CREATE PROCEDURE GetRentalCountByCustomer(
+    IN cust_id INT,
+    OUT total_rentals INT
+)
+BEGIN
+    SELECT COUNT(*) INTO total_rentals
+    FROM rental
+    WHERE customer_id = cust_id;
+END //
+
+DELIMITER ;
+
+CALL GetRentalCountByCustomer(3, @count);
+SELECT @count;
+
+Exp: For this we are creating Stored Procedure GetRentalCountByCustomer, we are providing customer ID and need result for number of rentals. 
+
+Dynamic SQL
+It is a technique where SQL statements are built and executed at runtime instead of being fixed. It allows queries to change based on user input, program logic, conditions which make it flexible.
+
+When: Table or column names not known in advance, filters depends on user input, queries need to change dynamically.
+
+Ex: Search customers by first name
+DELIMITER //
+
+CREATE PROCEDURE SearchCustomerByName(IN name_input VARCHAR(50))
+BEGIN
+    SET @sql = CONCAT(
+        'SELECT customer_id, first_name, last_name 
+         FROM customer 
+         WHERE first_name LIKE "%', name_input, '%"'
+    );
+
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+END //
+
+DELIMITER ;
+
+CALL SearchCustomerByName('AN');
+
+Exp: Here we are building query as a string, concat() joins parts together. Prepare converts string into executable statement.
+
+Indexing
+It is a technique used to speed up data retrieval operations by minimizing the number of accesses required to locate records.
+
+Types of Indexing Methods
+1.	Clustered Indexing
+It stores the actual data rows in sorted order based on the index. It is always a primary key. There will be only one clustered index per table.
+2.	Non-clustered Indexing
+It stores index separately and points to actual data. Here the table data is not sorted only the index is.
+
+Ex of Non-clustered index
+                  Without Indexing
+
+EXPLAIN SELECT *
+FROM payment
+WHERE amount = 2.99;
+
+Here the type will be ‘All’ as it scans every row in payment table.
+
+With Indexing
+
+CREATE INDEX idx_payment_amount
+ON payment(amount);
+
+Here the type will be ‘ref’, it goes it index find all rows where amount = 2.99 and fetch only those rows. 
+
+With primary key
+
+EXPLAIN SELECT *
+FROM payment
+WHERE amount = 2.99
+AND payment_id = 10;
+
+Here the type will be ‘const’, it jumps directly to the exact row no more scanning.
